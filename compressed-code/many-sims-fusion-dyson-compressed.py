@@ -34,16 +34,29 @@ def performfusions(thetas,fusion_angle):
 
 
 def one_simulation(N,N_iter,dt,beta,lf,startfusion,sim,filenamebase,freediffusion):
-    # ("N", type=int, help="initial number of particles")
-    # ("N_iter", type=int, help="number of iterations per simulation")
-    # ("dt", type=float, help="virtual time step" )
-    # ("beta", type=float, help="inverse temperature")
-    # ("lf",type=float, help="fusion length")
-    # ("startfusion", type=int, help="iteration where to start the fusion processes")
-    # ("sim", type=int, help="simulation number")
-    # filenamebase to save the data
+    """Performs one simulation of the Dyson brownian model on a circle with fusion events
 
-  
+    Parameters
+    ----------
+    N : int
+        Initial number of particles
+    N_iter : int
+        Number of iterations (steps) of the simulation
+    dt : float
+        time step
+    beta : float
+        inverse temperature, coupling constant
+    lf : float
+        fusion length. Angle length is 0.1* lf * 2 pi/N
+    startfusion : int
+        iteration where to start the fusion processes
+    sim : int
+        simulation number used to save the data results
+    filenamebase : str
+        filenamebase to save the data. The data is saved to filenamebase+str(sim)
+
+    """
+
     # friction coefficient (absorbed in the time unit)
     f=1
     # Calculate the mean separation depending on the initial number of particles
@@ -119,15 +132,24 @@ def argument_parsing():
     return parser.parse_args()
 
 def build_filenamebase(args):
+    """ Builds the filenamebase.
+    
+    Paramemeters
+    ------------
+    args : namespace with the program arguments
+
+    Filenaming convention: 
+    filename base is filename =
+    Nxx_Niterxx_Nsimxx_Nsimstxx_betaxx_dtxx_lfxx_stfxx_
+    filename+'args.json': saves the simulations parameters
+    filename+'simXX.csv': saves the data from simulation number XX
+     
+    """
+
     # transform arguments args to a dictionary
     args_dict=vars(args)
-    # filenaming convention: 
-    # filename base is filename =
-    # Nxx_Niterxx_Nsimxx_Nsimstxx_betaxx_dtxx_lfxx_stfxx_
-    # filename+'args.json': saves the simulations parameters
-    # filename+'simXX.csv': saves the data from simulation number XX
-    # 
     # contruct the filename with the simulation parameters:
+
     filename=''
     for key, val in sorted(args_dict.items()):
         if key != 'silent' and key != 'freediffusion':
