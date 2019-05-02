@@ -9,9 +9,25 @@ import logging
 # TODO write code to read the args and the data and create the filename 
 
 def decompress_data(compressed_df,dt,N_iter):
-    # compressed_df = compressed dataframe with only the changes in N and the times
-    # dt = time step
-    # output : decompressed data with all the times repeating the number of particles when it does not change
+    """ Decompresses a data frame that has only the time when the particles changes 
+    to one with all times for each time step.
+
+    Parameters
+    ----------
+    compressed_df : pd.DataFrame
+        compressed dataframe with only the changes in N and the times
+    dt : float
+        time step
+    N_iter : int
+        Total number of iterations (time steps) in the simulation
+
+    Returns
+    -------
+    pd.DataFrame
+        decompressed data with all the times repeating the number of particles when it does not change
+
+    """
+    
     decomp_df=pd.DataFrame()
     for i in compressed_df.index:
         t_now=float(compressed_df.at[i,'t'])
@@ -81,12 +97,14 @@ logging.info('Found %s simulations files to analyse', Nsims)
 time_df=pd.DataFrame([ n*dt for n in np.arange(N_iter)], columns=['t'])
 N_df=pd.concat([time_df, pd.DataFrame(np.zeros((time_df.shape[0],4)))],axis=1, ignore_index=True)
 N_df.columns=['t','log_t','N_avg','std_N','log_N']
+count=1
 for filename in filenames:
-    logging.info("Analysing %s", filename)
+    logging.info("Analysing file # %s : %s", count, filename)
     tmp_comp_df=pd.read_csv(filename)
     tmp_df=decompress_data(tmp_comp_df,dt,N_iter)
     N_df['N_avg']=N_df['N_avg']+tmp_df['N']
     N_df['std_N']=N_df['std_N']+tmp_df['N']*tmp_df['N']
+    count=count+1
 N_df['N_avg']=N_df['N_avg']/Nsims
 N_df['std_N']=N_df['std_N']/Nsims
 N_df['std_N']=np.sqrt(N_df['std_N']-N_df['N_avg']*N_df['N_avg'])
