@@ -65,7 +65,7 @@ def build_filenames(params_dict):
     filenamebase=''
     filenameglob=''
     for key, val in sorted(params_dict.items()):
-        if key != 'silent' and key != 'Nsim' and key != 'Nsimst' and key != 'freediffusion':
+        if key != 'silent' and key != 'Nsim' and key != 'Nsimst' and key != 'freediffusion' and key != 'Nf' and key !='log':
             filenamebase = filenamebase + key + str(val)+'_'
             filenameglob = filenameglob + key + str(val)+'_'
         elif key == 'Nsim' or key == 'Nsimst':
@@ -105,8 +105,9 @@ for filename in filenames:
     N_df['N_avg']=N_df['N_avg']+tmp_df['N']
     N_df['std_N']=N_df['std_N']+tmp_df['N']*tmp_df['N']
     count=count+1
-N_df['N_avg']=N_df['N_avg']/Nsims
-N_df['std_N']=N_df['std_N']/Nsims
+N_df['N_avg']=np.float64(N_df['N_avg']/Nsims)
+N_df['std_N']=np.float64(N_df['std_N']/Nsims)
+print(N_df)
 N_df['std_N']=np.sqrt(N_df['std_N']-N_df['N_avg']*N_df['N_avg'])
 N_df['log_N']=np.log(N_df['N_avg'])
 N_df['log_N']=np.log(N_df['N_avg'])
