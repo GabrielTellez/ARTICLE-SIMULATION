@@ -33,7 +33,7 @@ def performfusions(thetas,fusion_angle):
     return thetas
 
 
-def one_simulation(N,N_iter,dt,beta,lf,startfusion,sim,filenamebase,freediffusion):
+def one_simulation(N,N_iter,dt,beta,lf,startfusion,sim,filenamebase,freediffusion,N_final):
     """Performs one simulation of the Dyson brownian model on a circle with fusion events
 
     Parameters
@@ -54,6 +54,8 @@ def one_simulation(N,N_iter,dt,beta,lf,startfusion,sim,filenamebase,freediffusio
         simulation number used to save the data results
     filenamebase : str
         filenamebase to save the data. The data is saved to filenamebase+str(sim)
+    N_final : int
+        Final number of particles to stop the simulation if reached before N_iter
 
     """
 
@@ -79,7 +81,9 @@ def one_simulation(N,N_iter,dt,beta,lf,startfusion,sim,filenamebase,freediffusio
     data_n=pd.DataFrame([[t, len(theta_now)]], columns=['t', 'N'])
     k=0 
     logging.info("Running simulation # %s", sim)
-    while k<N_iter and len(theta_now)!=0:
+    logging.debug("time, N")
+    logging.debug("%s, %s", 0, N)
+    while k<N_iter and len(theta_now)>N_final:
         theta_later=[]
         for i in np.arange(len(theta_now)):
             if freediffusion:
@@ -104,7 +108,8 @@ def one_simulation(N,N_iter,dt,beta,lf,startfusion,sim,filenamebase,freediffusio
        
         # Save only if there was a fusion (to save HDD space)
         if len(theta_later) < len(theta_now) :       
-            data_n=data_n.append({'t': t, 'N': len(theta_later)},ignore_index=True)         
+            data_n=data_n.append({'t': t, 'N': len(theta_later)},ignore_index=True)   
+            logging.debug("%s, %s",t,len(theta_later))      
         # Evolve the simulation
         theta_now=theta_later 
         t=t+dt
@@ -129,6 +134,11 @@ def argument_parsing():
     parser.add_argument("stf", type=int, help="iteration where to start the fusion processes")
     parser.add_argument("-s", "--silent", help="do not print diagnose messages", action="store_true")
     parser.add_argument("--freediffusion", help="turn off the log repulsion interaction", action="store_true")
+    parser.add_argument("-Nf", type=int, 
+                        help="stops the simulation when the number of particles falls below NF. Default NF=0", 
+                        default=0)
+    parser.add_argument("--log", help="sets the log level. Default=INFO. DEBUG will print detailled output of the simulation",
+                        default="INFO")
     return parser.parse_args()
 
 def build_filenamebase(args):
@@ -152,7 +162,7 @@ def build_filenamebase(args):
 
     filename=''
     for key, val in sorted(args_dict.items()):
-        if key != 'silent' and key != 'freediffusion':
+        if key != 'silent' and key != 'freediffusion' and key != 'Nf' and key != 'log':
             filename = filename + key + str(val)+'_'
     if args.freediffusion:
         filename = filename + 'freediffusion_'
@@ -168,14 +178,22 @@ def saveargs(args):
 # Main program
 args = argument_parsing()
 # Set up logging info
-if not args.silent :
-    logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.INFO)
+# assuming loglevel is bound to the string value obtained from the
+# command line argument. Convert to upper case to allow the user to
+# specify --log=DEBUG or --log=debug
+loglevel=args.log
+if not args.silent:
+    numeric_level = getattr(logging, loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % loglevel)
+    logging.basicConfig(format='%(asctime)s : %(message)s', level=numeric_level)
 filenamebase = build_filenamebase(args)
 saveargs(args)
 # run the simulations
 logging.info("Starting %s simulations with parameters:\n %s",args.Nsim, json.dumps(vars(args), indent=4,sort_keys=True))
 for sim in range(args.Nsimst,args.Nsimst+args.Nsim):
-    one_simulation(args.N,args.Niter,args.dt,args.beta,args.lf,args.stf,sim,filenamebase,args.freediffusion)
+    one_simulation(args.N,args.Niter,args.dt,args.beta,args.lf,args.stf,
+                   sim,filenamebase,args.freediffusion,args.Nf)
 logging.info("Finished %s simulations", args.Nsim)
 
 
