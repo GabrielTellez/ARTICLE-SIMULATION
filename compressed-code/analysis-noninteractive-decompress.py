@@ -8,7 +8,7 @@ import logging
 # input JSON filename to get the data 
 # TODO write code to read the args and the data and create the filename 
 
-def decompress_data(compressed_df,dt,N_iter):
+def decompress_data(compressed_df,dt,N_iter,mul=1):
     """ Decompresses a data frame that has only the time when the particles changes 
     to one with all times for each time step.
 
@@ -17,9 +17,13 @@ def decompress_data(compressed_df,dt,N_iter):
     compressed_df : pd.DataFrame
         compressed dataframe with only the changes in N and the times
     dt : float
-        time step
+        original time step
     N_iter : int
         Total number of iterations (time steps) in the simulation
+    mul : int
+        Generate data for times that are multiples of dt.
+        New time step is mul*dt 
+        Default mul=1
 
     Returns
     -------
@@ -36,8 +40,8 @@ def decompress_data(compressed_df,dt,N_iter):
         else:
             tf=N_iter*dt
         N_now=int(compressed_df.at[i,'N'])
-        steps=int(round((tf-t_now)/dt,0))
-        to_add_df=pd.DataFrame([(t, N_now) for t in np.linspace(t_now,tf-dt,steps)], columns=['t','N'])
+        steps=int(round((tf-t_now)/(dt*mul),0))
+        to_add_df=pd.DataFrame([(t, N_now) for t in np.linspace(t_now,tf-dt*mul,steps)], columns=['t','N'])
         decomp_df=decomp_df.append(to_add_df,ignore_index = True)
     return decomp_df  
 
@@ -45,6 +49,7 @@ def argument_parsing():
     # Parse parameters filename for the analysis
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", type=str, help="name of the JSON file with the simulations parameters")
+    parser.add_argument("-m", "--mul", type=int, help="generate data for multiples the original time step: m * dt. Default = 1", default=1)
     parser.add_argument("-s", "--silent", help="do not print diagnose messages", action="store_true")
     return parser.parse_args()
 
@@ -78,8 +83,8 @@ def build_filenames(params_dict):
         filenameglob = filenameglob+'sim*.csv'
     return filenamebase, filenameglob
 
-def build_finalfilename(filenamebase, Nsims):
-    filenamefinal = 'resumen_'+filenamebase+'Nsimstot'+str(Nsims)+'.csv'
+def build_finalfilename(filenamebase, Nsims, mul=1):
+    filenamefinal = 'resumen_'+filenamebase+'Nsimstot'+str(Nsims)+'_mul'+str(mul)+'.csv'
     return filenamefinal
 
 # Main program
@@ -87,32 +92,33 @@ args = argument_parsing()
 if not args.silent :
     logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.INFO)
 params = get_params(args.filename)
+logging.info("Analysis program called with arguments:\n%s", json.dumps(vars(args), indent=4, sort_keys=True))
 logging.info("Starting analysis using the parameters:\n %s", json.dumps(params, indent=4, sort_keys=True))
 filenamebase, filenameglob = build_filenames(params)
 dt=float(params["dt"])
 N_iter=int(params["Niter"])
+m=args.mul
 filenames=glob.glob(filenameglob)
 Nsims=len(filenames)
 logging.info('Found %s simulations files to analyse', Nsims)
-time_df=pd.DataFrame([ n*dt for n in np.arange(N_iter)], columns=['t'])
+time_df=pd.DataFrame([ n*m*dt for n in np.arange(N_iter/m)], columns=['t'])
 N_df=pd.concat([time_df, pd.DataFrame(np.zeros((time_df.shape[0],4)))],axis=1, ignore_index=True)
 N_df.columns=['t','log_t','N_avg','std_N','log_N']
 count=1
 for filename in filenames:
     logging.info("Analysing file # %s : %s", count, filename)
     tmp_comp_df=pd.read_csv(filename)
-    tmp_df=decompress_data(tmp_comp_df,dt,N_iter)
+    tmp_df=decompress_data(tmp_comp_df,dt,N_iter,m)
     N_df['N_avg']=N_df['N_avg']+tmp_df['N']
     N_df['std_N']=N_df['std_N']+tmp_df['N']*tmp_df['N']
     count=count+1
 N_df['N_avg']=np.float64(N_df['N_avg']/Nsims)
 N_df['std_N']=np.float64(N_df['std_N']/Nsims)
-print(N_df)
 N_df['std_N']=np.sqrt(N_df['std_N']-N_df['N_avg']*N_df['N_avg'])
 N_df['log_N']=np.log(N_df['N_avg'])
 N_df['log_N']=np.log(N_df['N_avg'])
 N_df['log_t']=np.log(N_df['t'])
 # N_df=N_df.drop([0])
-filenamefinal = build_finalfilename(filenamebase,Nsims)
+filenamefinal = build_finalfilename(filenamebase,Nsims,m)
 N_df.to_csv(filenamefinal,index=False)
 logging.info('Wrote final data analysis to %s', filenamefinal)
