@@ -31,8 +31,9 @@ def decompress_data(compressed_df,dt,N_iter,mul=1):
         decompressed data with all the times repeating the number of particles when it does not change
 
     """
-    
-    decomp_df=pd.DataFrame()
+    tf=N_iter*dt
+    steps=int(round(N_iter/m,0))
+    decomp_df=pd.DataFrame([(t, 0.0) for t in np.linspace(0.0,tf-dt*m, steps)], columns=['t','N'])
     for i in compressed_df.index:
         t_now=float(compressed_df.at[i,'t'])
         if(i!=compressed_df.index[-1]):
@@ -40,11 +41,9 @@ def decompress_data(compressed_df,dt,N_iter,mul=1):
         else:
             tf=N_iter*dt
         N_now=int(compressed_df.at[i,'N'])
-        steps=int(round((tf-t_now)/(dt*mul),0))
-        to_add_df=pd.DataFrame([(t, N_now) for t in np.linspace(t_now,tf-dt*mul,steps)], columns=['t','N'])
-        decomp_df=decomp_df.append(to_add_df,ignore_index = True)
-    return decomp_df  
-
+        decomp_df.loc[(decomp_df['t']>=t_now) & (decomp_df['t']<=tf),'N']=float(N_now)
+    return decomp_df
+    
 def argument_parsing():
     # Parse parameters filename for the analysis
     parser = argparse.ArgumentParser()
@@ -101,7 +100,10 @@ m=args.mul
 filenames=glob.glob(filenameglob)
 Nsims=len(filenames)
 logging.info('Found %s simulations files to analyse', Nsims)
-time_df=pd.DataFrame([ n*m*dt for n in np.arange(N_iter/m)], columns=['t'])
+tf=N_iter*dt
+steps=int(round(N_iter/m,0))
+time_df=pd.DataFrame([(t) for t in np.linspace(0.0, tf-dt*m,steps)], columns=['t'])
+# time_df=pd.DataFrame([ n*m*dt for n in np.arange(N_iter/m)], columns=['t'])
 N_df=pd.concat([time_df, pd.DataFrame(np.zeros((time_df.shape[0],4)))],axis=1, ignore_index=True)
 N_df.columns=['t','log_t','N_avg','std_N','log_N']
 count=1

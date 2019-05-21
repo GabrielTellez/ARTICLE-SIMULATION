@@ -1,6 +1,9 @@
 # Compressed codes:
 
 Nueva version del codigo que escribe los resultados "comprimidos" reportando únicamente el numero de partículas y el tiempo en que cambió este número.  
+## many-sims-fusion-dyson-optimized.py
+Version optimizada de many-sims-fusion-dyson-compressed.py en la detección de los eventos de fusión.
+
 ## many-sims-fusion-dyson-compressed.py
 Corre varias simulaciones secuencialmente.  
 ### usage:   
